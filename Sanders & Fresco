@@ -1,0 +1,67 @@
+pipeline {
+  agent any
+  tools { maven 'Maven 3' } // Use the Maven installation configured in Jenkins
+
+  stages {
+    stage('Compile') {
+      steps {
+        script {
+          if (isUnix()) {
+            sh 'mvn clean compile'
+          } else {
+            powershell 'mvn clean compile'
+          }
+        }
+      }
+    }
+    stage('Code Review') {
+      steps {
+        script {
+          if (isUnix()) {
+            sh 'mvn sonar:sonar'
+          } else {
+            powershell 'mvn sonar:sonar'
+          }
+        }
+      }
+    }
+    stage('Unit Test') {
+      steps {
+        script {
+          if (isUnix()) {
+            sh 'mvn test'
+          } else {
+            powershell 'mvn test'
+          }
+        }
+      }
+    }
+    stage('Package') {
+      steps {
+        script {
+          if (isUnix()) {
+            sh 'mvn package'
+          } else {
+            powershell 'mvn package'
+          }
+        }
+      }
+    }
+    stage('Deploy') {
+      steps {
+        script {
+          if (isUnix()) {
+            sh '''
+curl -u jenkins:jenkinspass -T target/*.war "http://localhost:8081/manager/text/deploy?path=/myapp&update=true"
+'''
+          } else {
+            powershell '''
+Invoke-WebRequest -Uri "http://localhost:8081/manager/text/deploy?path=/myapp&update=true" -InFile "target/*.war" -Credential (New-Object PSCredential("jenkins", (ConvertTo-SecureString "jenkinspass" -AsPlainText -Force))) -Method Put
+'''
+          }
+        }
+      }
+    }
+  }
+}
+
